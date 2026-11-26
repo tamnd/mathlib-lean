@@ -10,7 +10,11 @@ Each release has a section. The newest release is first.
 
 ### Fixed
 
-- The bump workflow did not push the branch, because the personal token does not accept the user name `x-access-token`. The workflow now sets up the Git credentials with `gh auth setup-git`.
+- The bump workflow did not push the branch, because the token in the secret `MATHLIB_RELEASE_TOKEN` is not valid. The workflow now uses `GITHUB_TOKEN`. It starts the build and check workflows on the bump branch, because a push with `GITHUB_TOKEN` does not start them.
+
+### Removed
+
+- The index workflow. It is now in tamnd/mathlib, so that it can upload to the release `index` with `GITHUB_TOKEN` and needs no personal token.
 
 ## v0.0.1 - 2026-11-26
 

@@ -1,6 +1,6 @@
 name: bump
 
-# Move the Mathlib dependency to the newest commit of Mathlib master, build the package and open a pull request (spec 05.3). This is the fallback of spec 05.3. It does the steps of mathlib-update-action with intermediate_releases set to master, and it writes the pull request with the labels of this project. It does not bisect, so a failure gives a range of commits. The registration in downstream-reports waits for Q-11.
+# Move the Mathlib dependency to the newest commit of Mathlib master, build the package and open a pull request (spec 05.3). This is the fallback of spec 05.3. It does the steps of mathlib-update-action with intermediate_releases set to master, and it writes the pull request with the labels of this project. It does not bisect, so a failure gives a range of commits. The registration in downstream-reports waits for Q-11. The workflow uses GITHUB_TOKEN, so the repository setting that lets GitHub Actions create pull requests must be on.
 on:
   schedule:
     - cron: "17 */6 * * *"
@@ -21,6 +21,11 @@ jobs:
     name: bump, build and open the pull request
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -59,7 +64,7 @@ jobs:
       - name: open or update the pull request
         if: steps.update.outputs.skip != 'true' && steps.build.outcome == 'success'
         env:
-          GH_TOKEN: ${{ secrets.MATHLIB_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           OLD: ${{ steps.update.outputs.old }}
           NEW: ${{ steps.update.outputs.new }}
           SHORT: ${{ steps.update.outputs.short }}
@@ -95,10 +100,13 @@ jobs:
           else
             gh pr create -R "$GITHUB_REPOSITORY" --head "$BRANCH" --title "$title" --body-file body.md --label area/bump --label type/chore
           fi
+          # A push with GITHUB_TOKEN does not start other workflows, so start the build and the check of the branch here. Their check runs show on the pull request.
+          gh workflow run build.yml -R "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          gh workflow run check.yml -R "$GITHUB_REPOSITORY" --ref "$BRANCH"
       - name: open or update the issue of the failure
         if: steps.update.outputs.skip != 'true' && steps.build.outcome == 'failure'
         env:
-          GH_TOKEN: ${{ secrets.MATHLIB_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           OLD: ${{ steps.update.outputs.old }}
           NEW: ${{ steps.update.outputs.new }}
           SHORT: ${{ steps.update.outputs.short }}
