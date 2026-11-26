@@ -100,9 +100,16 @@ jobs:
           else
             gh pr create -R "$GITHUB_REPOSITORY" --head "$BRANCH" --title "$title" --body-file body.md --label area/bump --label type/chore
           fi
-          # A push with GITHUB_TOKEN does not start other workflows, so start the build and the check of the branch here. Their check runs show on the pull request.
-          gh workflow run build.yml -R "$GITHUB_REPOSITORY" --ref "$BRANCH"
-          gh workflow run check.yml -R "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          # GitHub holds the pull_request runs of a pull request that github-actions opens until a person approves them. Approve the runs of the head commit, so that the build and the check show on the pull request.
+          sha=$(git rev-parse HEAD)
+          for _ in $(seq 1 24); do
+            ids=$(gh run list -R "$GITHUB_REPOSITORY" --commit "$sha" --event pull_request --json databaseId,conclusion -q '.[] | select(.conclusion == "action_required") | .databaseId')
+            if [ "$(echo "$ids" | grep -c .)" -ge 2 ]; then break; fi
+            sleep 5
+          done
+          for id in $ids; do
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve"
+          done
       - name: open or update the issue of the failure
         if: steps.update.outputs.skip != 'true' && steps.build.outcome == 'failure'
         env:

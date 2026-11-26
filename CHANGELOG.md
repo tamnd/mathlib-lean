@@ -10,7 +10,7 @@ Each release has a section. The newest release is first.
 
 ### Fixed
 
-- The bump workflow did not push the branch, because the token in the secret `MATHLIB_RELEASE_TOKEN` is not valid. The workflow now uses `GITHUB_TOKEN`. It starts the build and check workflows on the bump branch, because a push with `GITHUB_TOKEN` does not start them.
+- The bump workflow did not push the branch, because the token in the secret `MATHLIB_RELEASE_TOKEN` is not valid. The workflow now uses `GITHUB_TOKEN`. GitHub holds the build and check runs of a pull request that github-actions opens, so the workflow approves the runs of the head commit.
 
 ### Removed
 
