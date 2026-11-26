@@ -1,0 +1,100 @@
+name: index
+
+# Write the index of Mathlib at the commit of lake-manifest.json and upload it to the release index of tamnd/mathlib (spec 10.5). The job skips the run when the release already has an index of the commit. A full run on 2026-11-26 took 11 minutes and 2.9 GB of memory on a laptop with 8 jobs, so a hosted runner is enough.
+on:
+  schedule:
+    - cron: "40 5 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Write the index again when the release has one for the commit"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: index
+  cancel-in-progress: false
+
+env:
+  REPO: tamnd/mathlib
+  TAG: index
+  KEEP: "30"
+
+jobs:
+  index:
+    name: write and upload the index
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: find the Mathlib commit
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.MATHLIB_RELEASE_TOKEN }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          sha=$(jq -r '.packages[] | select(.name == "mathlib") | .rev' lake-manifest.json)
+          date=$(date -u +%F)
+          short=${sha:0:10}
+          printf 'sha=%s\ndate=%s\nshort=%s\n' "$sha" "$date" "$short" >> "$GITHUB_OUTPUT"
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::The secret MATHLIB_RELEASE_TOKEN is not set."
+            exit 1
+          fi
+          if [ "$FORCE" != "true" ] && gh release view "$TAG" -R "$REPO" --json assets -q '.assets[].name' | grep -q -- "-$short.jsonl.gz$"; then
+            echo "The release has an index of $short."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: install elan
+        if: steps.commit.outputs.skip != 'true'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o elan-init.sh
+          sh elan-init.sh -y --default-toolchain none
+          rm elan-init.sh
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: get the Mathlib cache
+        if: steps.commit.outputs.skip != 'true'
+        run: lake exe cache get
+      - name: write the index
+        if: steps.commit.outputs.skip != 'true'
+        env:
+          SHA: ${{ steps.commit.outputs.sha }}
+          DATE: ${{ steps.commit.outputs.date }}
+        run: |
+          /usr/bin/time -v -o time.txt lake env lean --run scripts/Index.lean "$SHA" "$DATE" out --jobs "$(nproc)"
+          {
+            echo "### The index of Mathlib $SHA"
+            echo
+            echo "| Measure | Value |"
+            echo "|---|---|"
+            echo "| Wall time | $(grep 'Elapsed (wall clock)' time.txt | awk '{print $NF}') |"
+            echo "| Peak memory (KB) | $(grep 'Maximum resident' time.txt | awk '{print $NF}') |"
+            echo "| Declarations | $(head -1 out/index.jsonl | jq .count) |"
+            echo "| Modules | $(head -1 out/modules.jsonl | jq .count) |"
+            echo "| Records with an error | $(grep -c '"error":' out/index.jsonl || true) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          gzip -9 out/index.jsonl out/modules.jsonl
+          ls -l out >> "$GITHUB_STEP_SUMMARY"
+      - name: upload the index
+        if: steps.commit.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.MATHLIB_RELEASE_TOKEN }}
+          KEY: ${{ steps.commit.outputs.date }}-${{ steps.commit.outputs.short }}
+        run: |
+          mv out/index.jsonl.gz "index-$KEY.jsonl.gz"
+          mv out/modules.jsonl.gz "modules-$KEY.jsonl.gz"
+          gh release upload "$TAG" -R "$REPO" --clobber "index-$KEY.jsonl.gz" "modules-$KEY.jsonl.gz"
+      - name: remove the old indexes
+        if: steps.commit.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.MATHLIB_RELEASE_TOKEN }}
+        run: |
+          gh release view "$TAG" -R "$REPO" --json assets -q '.assets[].name' | grep '^index-' | sort -r | tail -n +"$((KEEP + 1))" | while read -r name; do
+            gh release delete-asset "$TAG" "$name" -R "$REPO" -y
+            gh release delete-asset "$TAG" "modules-${name#index-}" -R "$REPO" -y || true
+          done
