@@ -1,0 +1,6 @@
+.lake/
+/records/
+/index/
+*.olean
+.DS_Store
+/scratch/

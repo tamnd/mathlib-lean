@@ -1,0 +1,38 @@
+name: build
+
+# Build the package on top of the Mathlib cache. The build checks every example and solution against the Mathlib commit of lake-manifest.json. The job then checks that no declaration of the package uses sorry or a nonstandard axiom.
+on:
+  push:
+    branches: [main, "edition/**"]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: lake build and the axioms
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o elan-init.sh
+          sh elan-init.sh -y --default-toolchain none
+          rm elan-init.sh
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: get the Mathlib cache
+        run: lake exe cache get
+      - name: build
+        run: lake build --wfail
+      - name: check the axioms
+        run: lake env lean --run scripts/Axioms.lean MathlibHandbook
