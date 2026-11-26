@@ -7,6 +7,8 @@ Each release has a section. The newest release is first.
 ### Added
 
 - SubVerso is a dependency. `scripts/highlight.sh` writes the highlighted Lean of each file as JSON, and CI puts the tarball on the release `highlighted` (spec 12.5).
+- The examples, exercises and solutions of V00, V01 and V34 (spec 10). `Examples.lean` and `Solutions.lean` are in the default build. `Exercises.lean` has `sorry` and is in the separate library `Exercises`, so the default build stays free of escape hatches.
+- `scripts/Exercises.lean` checks that each exercise has a solution with the same name and the same statement. CI builds the library `Exercises` and runs this check.
 
 ## v0.1.1 - 2026-11-26
 

@@ -37,6 +37,10 @@ jobs:
         run: lake build --wfail
       - name: check the axioms
         run: lake env lean --run scripts/Axioms.lean MathlibHandbook
+      - name: build the exercises
+        run: lake build Exercises
+      - name: each exercise has a solution with the same statement
+        run: lake env lean --run scripts/Exercises.lean
       - name: the highlighted Lean
         id: hl
         run: echo "file=$(./scripts/highlight.sh | tail -1)" >> "$GITHUB_OUTPUT"

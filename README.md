@@ -32,7 +32,11 @@ The branch `main` follows Mathlib `master`. A branch `edition/v4.X.0` follows th
 lake exe cache get
 lake build
 lake env lean --run scripts/Axioms.lean
+lake build Exercises
+lake env lean --run scripts/Exercises.lean
 ```
+
+To work on the exercises, open a file `Exercises.lean` and replace each `sorry` with a proof. Then run `lake build Exercises`. The solutions are in the file `Solutions.lean` of the same folder.
 
 Use `lake exe cache get` before the first build. It downloads the Mathlib build files, so a build of the package takes minutes and not hours.
 
@@ -43,10 +47,14 @@ The handbook prints each Lean block with the token kinds of the Lean elaborator 
 | Path | Content |
 |---|---|
 | `MathlibHandbook/V<NN>/C<NN>/Examples.lean` | the examples of one chapter of volume `V<NN>`, with anchors |
+| `MathlibHandbook/V<NN>/C<NN>/Exercises.lean` | the (L) exercises of the chapter, with `sorry`, in the library `Exercises` |
+| `MathlibHandbook/V<NN>/C<NN>/Solutions.lean` | the solutions of the (L) exercises, with the same names and statements |
+| `MathlibHandbook/Exercises.lean` | the root of the library `Exercises`; the default build does not import it |
 | `MathlibHandbook.lean` | the root; it imports each file of the default build |
 | `scripts/Axioms.lean` | the axiom check: no `sorryAx` and no axiom outside `propext`, `Classical.choice` and `Quot.sound` |
 | `scripts/scan.sh` | the scan for `sorry`, `admit`, `axiom`, `native_decide`, `implemented_by` and `@[extern]` |
 | `scripts/modules.sh` | the check that each file is a `module` file and does not import all of Mathlib |
+| `scripts/Exercises.lean` | the check that each exercise has a solution with the same statement |
 | `scripts/highlight.sh` | the SubVerso JSON of each file, in one tarball for mlhb |
 
 ## Rules

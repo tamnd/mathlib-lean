@@ -1,6 +1,37 @@
 module
 
 public import MathlibHandbook.V00.C01.Examples
+public import MathlibHandbook.V00.C01.Solutions
+public import MathlibHandbook.V00.C02.Examples
+public import MathlibHandbook.V00.C02.Solutions
+public import MathlibHandbook.V00.C03.Examples
+public import MathlibHandbook.V00.C03.Solutions
+public import MathlibHandbook.V00.C04.Examples
+public import MathlibHandbook.V00.C04.Solutions
+public import MathlibHandbook.V00.C05.Examples
+public import MathlibHandbook.V00.C05.Solutions
+public import MathlibHandbook.V01.C01.Examples
+public import MathlibHandbook.V01.C01.Solutions
+public import MathlibHandbook.V01.C02.Examples
+public import MathlibHandbook.V01.C02.Solutions
+public import MathlibHandbook.V01.C03.Examples
+public import MathlibHandbook.V01.C03.Solutions
+public import MathlibHandbook.V01.C04.Examples
+public import MathlibHandbook.V01.C04.Solutions
+public import MathlibHandbook.V01.C05.Examples
+public import MathlibHandbook.V01.C05.Solutions
+public import MathlibHandbook.V01.C06.Examples
+public import MathlibHandbook.V01.C06.Solutions
+public import MathlibHandbook.V34.C01.Examples
+public import MathlibHandbook.V34.C01.Solutions
+public import MathlibHandbook.V34.C02.Examples
+public import MathlibHandbook.V34.C02.Solutions
+public import MathlibHandbook.V34.C03.Examples
+public import MathlibHandbook.V34.C03.Solutions
+public import MathlibHandbook.V34.C04.Examples
+public import MathlibHandbook.V34.C04.Solutions
+public import MathlibHandbook.V34.C05.Examples
+public import MathlibHandbook.V34.C05.Solutions
 
 /-!
 # The Mathlib Handbook: the checked companion
