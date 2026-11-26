@@ -1,0 +1,121 @@
+name: bump
+
+# Move the Mathlib dependency to the newest commit of Mathlib master, build the package and open a pull request (spec 05.3). This is the fallback of spec 05.3. It does the steps of mathlib-update-action with intermediate_releases set to master, and it writes the pull request with the labels of this project. It does not bisect, so a failure gives a range of commits. The registration in downstream-reports waits for Q-11.
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump
+  cancel-in-progress: false
+
+env:
+  BRANCH: bump/master
+
+jobs:
+  bump:
+    name: bump, build and open the pull request
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o elan-init.sh
+          sh elan-init.sh -y --default-toolchain none
+          rm elan-init.sh
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: move Mathlib to master
+        id: update
+        run: |
+          old=$(jq -r '.packages[] | select(.name == "mathlib") | .rev' lake-manifest.json)
+          oldtc=$(cat lean-toolchain)
+          curl -sSfL https://raw.githubusercontent.com/leanprover-community/mathlib4/master/lean-toolchain -o lean-toolchain
+          lake update mathlib
+          cp .lake/packages/mathlib/lean-toolchain lean-toolchain
+          new=$(jq -r '.packages[] | select(.name == "mathlib") | .rev' lake-manifest.json)
+          printf 'old=%s\nnew=%s\nshort=%s\noldtc=%s\nnewtc=%s\n' "$old" "$new" "${new:0:10}" "$oldtc" "$(cat lean-toolchain)" >> "$GITHUB_OUTPUT"
+          if [ "$old" = "$new" ]; then
+            echo "Mathlib is at $old already."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: get the Mathlib cache
+        if: steps.update.outputs.skip != 'true'
+        run: lake exe cache get
+      - name: build
+        id: build
+        if: steps.update.outputs.skip != 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          lake build --wfail 2>&1 | tee build.log
+          lake env lean --run scripts/Axioms.lean MathlibHandbook 2>&1 | tee -a build.log
+      - name: open or update the pull request
+        if: steps.update.outputs.skip != 'true' && steps.build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.MATHLIB_RELEASE_TOKEN }}
+          OLD: ${{ steps.update.outputs.old }}
+          NEW: ${{ steps.update.outputs.new }}
+          SHORT: ${{ steps.update.outputs.short }}
+          OLDTC: ${{ steps.update.outputs.oldtc }}
+          NEWTC: ${{ steps.update.outputs.newtc }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add lake-manifest.json lean-toolchain
+          git commit -q -m "Bump Mathlib to $SHORT"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"
+          {
+            echo "## Summary"
+            echo
+            echo "This PR moves Mathlib from \`${OLD:0:10}\` to \`$SHORT\` on master. The toolchain is \`$NEWTC\`. The toolchain was \`$OLDTC\`."
+            echo
+            echo "The changes of Mathlib: https://github.com/leanprover-community/mathlib4/compare/$OLD...$NEW"
+            echo
+            echo "## Milestone"
+            echo
+            echo "Refers to tamnd/mathlib#1 (M0). The bump workflow made this PR."
+            echo
+            echo "## Checks"
+            echo
+            echo "- \`lake build --wfail\` passes on the new commit."
+            echo "- \`scripts/Axioms.lean\` finds no sorry and no nonstandard axiom."
+          } > body.md
+          title="Bump Mathlib to $SHORT"
+          if gh pr view "$BRANCH" -R "$GITHUB_REPOSITORY" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$BRANCH" -R "$GITHUB_REPOSITORY" --title "$title" --body-file body.md
+          else
+            gh pr create -R "$GITHUB_REPOSITORY" --head "$BRANCH" --title "$title" --body-file body.md --label area/bump --label type/chore
+          fi
+      - name: open or update the issue of the failure
+        if: steps.update.outputs.skip != 'true' && steps.build.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.MATHLIB_RELEASE_TOKEN }}
+          OLD: ${{ steps.update.outputs.old }}
+          NEW: ${{ steps.update.outputs.new }}
+          SHORT: ${{ steps.update.outputs.short }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "The bump to Mathlib \`$SHORT\` fails. The last good commit is \`${OLD:0:10}\`. The bad commit is in this range: https://github.com/leanprover-community/mathlib4/compare/$OLD...$NEW"
+            echo
+            echo "The run is $RUN. The last lines of the log are:"
+            echo
+            echo '```'
+            tail -n 40 build.log
+            echo '```'
+          } > body.md
+          num=$(gh issue list -R "$GITHUB_REPOSITORY" --label area/bump --label type/fix --state open --json number -q '.[0].number // empty')
+          if [ -n "$num" ]; then
+            gh issue comment "$num" -R "$GITHUB_REPOSITORY" --body-file body.md
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "The bump of Mathlib fails" --label area/bump --label type/fix --body-file body.md
+          fi
+          exit 1
