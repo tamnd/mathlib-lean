@@ -22,3 +22,8 @@ name = "MathlibHandbook"
 name = "subverso"
 git = "https://github.com/leanprover/subverso"
 rev = "main"
+
+# The (L) exercises of the handbook, with sorry (spec 10.4). The default build does not import them. CI builds this library without --wfail, so a statement that no longer elaborates still fails the build.
+[[lean_lib]]
+name = "Exercises"
+roots = ["MathlibHandbook.Exercises"]
