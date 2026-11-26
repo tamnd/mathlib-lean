@@ -41,9 +41,7 @@ jobs:
           sha=$(jq -r '.packages[] | select(.name == "mathlib") | .rev' lake-manifest.json)
           date=$(date -u +%F)
           short=${sha:0:10}
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "date=$date" >> "$GITHUB_OUTPUT"
-          echo "short=$short" >> "$GITHUB_OUTPUT"
+          printf 'sha=%s\ndate=%s\nshort=%s\n' "$sha" "$date" "$short" >> "$GITHUB_OUTPUT"
           if [ -z "$GH_TOKEN" ]; then
             echo "::error::The secret MATHLIB_RELEASE_TOKEN is not set."
             exit 1
