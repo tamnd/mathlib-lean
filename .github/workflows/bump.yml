@@ -71,7 +71,8 @@ jobs:
           git switch -c "$BRANCH"
           git add lake-manifest.json lean-toolchain
           git commit -q -m "Bump Mathlib to $SHORT"
-          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"
+          gh auth setup-git
+          git push -f origin "$BRANCH"
           {
             echo "## Summary"
             echo

@@ -8,6 +8,10 @@ Each release has a section. The newest release is first.
 
 - The workflow bump. Every 6 hours it moves Mathlib to the newest commit of master, builds the package and checks the axioms. When the build passes, it opens or updates the pull request on the branch `bump/master`. When the build fails, it opens or updates an issue with the range of Mathlib commits.
 
+### Fixed
+
+- The bump workflow did not push the branch, because the personal token does not accept the user name `x-access-token`. The workflow now sets up the Git credentials with `gh auth setup-git`.
+
 ## v0.0.1 - 2026-11-26
 
 ### Added
