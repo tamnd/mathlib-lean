@@ -16,3 +16,9 @@ rev = "master"
 
 [[lean_lib]]
 name = "MathlibHandbook"
+
+# SubVerso writes the highlighted Lean of each file as JSON (spec 12.5). The handbook prints the Lean blocks from this JSON.
+[[require]]
+name = "subverso"
+git = "https://github.com/leanprover/subverso"
+rev = "main"

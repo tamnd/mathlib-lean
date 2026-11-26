@@ -36,6 +36,8 @@ lake env lean --run scripts/Axioms.lean
 
 Use `lake exe cache get` before the first build. It downloads the Mathlib build files, so a build of the package takes minutes and not hours.
 
+The handbook prints each Lean block with the token kinds of the Lean elaborator (spec 12.5). To write these tokens, run `scripts/highlight.sh`. The script builds the facet `:highlighted` of SubVerso for each file and writes the tarball `highlighted-<commit>.tar.gz`. CI puts the tarball of each commit of main on the release `highlighted`. Give the unpacked folder to mlhb as `--highlight`.
+
 ## Layout
 
 | Path | Content |
@@ -45,6 +47,7 @@ Use `lake exe cache get` before the first build. It downloads the Mathlib build 
 | `scripts/Axioms.lean` | the axiom check: no `sorryAx` and no axiom outside `propext`, `Classical.choice` and `Quot.sound` |
 | `scripts/scan.sh` | the scan for `sorry`, `admit`, `axiom`, `native_decide`, `implemented_by` and `@[extern]` |
 | `scripts/modules.sh` | the check that each file is a `module` file and does not import all of Mathlib |
+| `scripts/highlight.sh` | the SubVerso JSON of each file, in one tarball for mlhb |
 
 ## Rules
 

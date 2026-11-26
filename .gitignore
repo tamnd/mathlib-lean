@@ -4,3 +4,4 @@
 *.olean
 .DS_Store
 /scratch/
+highlighted-*.tar.gz

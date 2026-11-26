@@ -1,6 +1,7 @@
 name: build
 
 # Build the package on top of the Mathlib cache. The build checks every example and solution against the Mathlib commit of lake-manifest.json. The job then checks that no declaration of the package uses sorry or a nonstandard axiom.
+# The job also writes the highlighted Lean of each file (SubVerso JSON, spec 12.5). On a push to main, the job publish puts the tarball highlighted-<commit>.tar.gz on the release highlighted, where mlhb gets it.
 on:
   push:
     branches: [main, "edition/**"]
@@ -36,3 +37,33 @@ jobs:
         run: lake build --wfail
       - name: check the axioms
         run: lake env lean --run scripts/Axioms.lean MathlibHandbook
+      - name: the highlighted Lean
+        id: hl
+        run: echo "file=$(./scripts/highlight.sh | tail -1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: highlighted
+          path: ${{ steps.hl.outputs.file }}
+          if-no-files-found: error
+
+  publish:
+    name: publish the highlighted Lean
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: highlighted
+          path: out
+      - name: upload to the release highlighted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view highlighted -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create highlighted -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "highlighted Lean" --notes "The SubVerso JSON of each file of the package, one tarball for each commit of main. mlhb of tamnd/mathlib-handbook reads it (spec 12.5)."
+          fi
+          gh release upload highlighted out/*.tar.gz --clobber -R "$GITHUB_REPOSITORY"

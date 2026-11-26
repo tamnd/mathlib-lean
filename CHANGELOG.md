@@ -4,6 +4,10 @@ Each release has a section. The newest release is first.
 
 ## Unreleased
 
+### Added
+
+- SubVerso is a dependency. `scripts/highlight.sh` writes the highlighted Lean of each file as JSON, and CI puts the tarball on the release `highlighted` (spec 12.5).
+
 ## v0.1.1 - 2026-11-26
 
 ## v0.1.0 - 2026-11-26
