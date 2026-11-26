@@ -4,6 +4,8 @@ Each release has a section. The newest release is first.
 
 ## Unreleased
 
+## v0.0.1 - 2026-11-26
+
 ### Added
 
 - The Lake package `MathlibHandbook` on Mathlib `master` at commit 4472534b60, with Lean v4.37.0-rc1.
