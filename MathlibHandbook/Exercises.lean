@@ -15,6 +15,14 @@ public import MathlibHandbook.V01.C03.Exercises
 public import MathlibHandbook.V01.C04.Exercises
 public import MathlibHandbook.V01.C05.Exercises
 public import MathlibHandbook.V01.C06.Exercises
+public import MathlibHandbook.V05.C01.Exercises
+public import MathlibHandbook.V05.C02.Exercises
+public import MathlibHandbook.V05.C03.Exercises
+public import MathlibHandbook.V05.C04.Exercises
+public import MathlibHandbook.V05.C05.Exercises
+public import MathlibHandbook.V05.C06.Exercises
+public import MathlibHandbook.V05.C07.Exercises
+public import MathlibHandbook.V05.C08.Exercises
 public import MathlibHandbook.V34.C01.Exercises
 public import MathlibHandbook.V34.C02.Exercises
 public import MathlibHandbook.V34.C03.Exercises
