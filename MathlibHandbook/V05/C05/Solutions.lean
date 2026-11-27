@@ -1,0 +1,43 @@
+/-
+Copyright (c) 2026 The Mathlib Handbook authors. All rights reserved.
+Released under the Apache 2.0 licence as described in the file LICENSE.
+-/
+module
+
+public import Mathlib.GroupTheory.QuotientGroup.Basic
+
+/-!
+# Volume 5, Chapter 5: the solutions of the (L) exercises
+
+Each theorem has the name and the statement of the exercise in `Exercises.lean`. The script `scripts/Exercises.lean` checks that the two statements are the same.
+-/
+
+public section
+
+namespace MathlibHandbook.V05.C05.Solutions
+
+-- anchor: mk_one_example
+/-- The class of `1` is the unit of the quotient. -/
+theorem mk_one_example {G : Type*} [Group G] (N : Subgroup G) [N.Normal] :
+    ((1 : G) : G ⧸ N) = 1 := by
+  exact QuotientGroup.mk_one N
+-- end: mk_one_example
+
+-- anchor: ker_mk_example
+/-- The kernel of the map to the quotient is the subgroup. -/
+theorem ker_mk_example {G : Type*} [Group G] (N : Subgroup G) [N.Normal] :
+    (QuotientGroup.mk' N).ker = N := by
+  exact QuotientGroup.ker_mk' N
+-- end: ker_mk_example
+
+-- anchor: conj_mem_example
+/-- A normal subgroup also has `g⁻¹ * n * g`. -/
+theorem conj_mem_example {G : Type*} [Group G] (N : Subgroup G) [N.Normal] {n : G} (hn : n ∈ N) (g : G) :
+    g⁻¹ * n * g ∈ N := by
+  simpa using Subgroup.Normal.conj_mem n hn g⁻¹
+-- end: conj_mem_example
+
+
+end MathlibHandbook.V05.C05.Solutions
+
+end
