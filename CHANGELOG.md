@@ -8,6 +8,7 @@ Each release has a section. The newest release is first.
 
 - `scripts/Index.lean` writes a third file, `proofs.jsonl`. Each line gives a theorem and the theorems of Mathlib that its proof uses, as the field `proofUses` of spec 09.3. Rule 2 of spec 04.4 needs these uses. Before, the index had only the uses of the types and of the values of definitions, so a theorem almost never had five uses.
 - The examples, exercises and solutions of V05 Groups, in eight chapters: monoids and groups, homomorphisms, subgroups, cosets and Lagrange, quotients, group actions, permutations and the Sylow theorems.
+- The examples, exercises and solutions of V02 Numbers, V03 Sets, finite structures and big operators, and V04 Order and lattices, in eight chapters each.
 
 ## v0.2.0 - 2026-11-27
 
