@@ -13,15 +13,18 @@ Run this file after `lake build`:
 lake env lean --run scripts/Index.lean <mathlib commit> <date> <out dir> [--no-type] [--jobs N] [--root Mathlib]
 ```
 
-It imports the root module, `Mathlib` by default, and writes two files to the out dir:
+It imports the root module, `Mathlib` by default, and writes three files to the out dir:
 - `index.jsonl`: one JSON line for each declaration of a `Mathlib` module, with the fields of spec 09.3;
-- `modules.jsonl`: one JSON line for each `Mathlib` module, with its module docstrings.
+- `modules.jsonl`: one JSON line for each `Mathlib` module, with its module docstrings;
+- `proofs.jsonl`: one JSON line for each theorem whose proof uses other theorems of Mathlib, with the field `proofUses` of spec 09.3.
 
 The first line of each file is a header with the Mathlib commit, the toolchain and the date. The toolchain `mlib index` of mathlib-agent reads these files.
 
 The filter is the one of spec 04.6. The program drops internal details, auxiliary recursors, `noConfusion`, `below`, `brecOn`, `match_` and `proof_` helpers and equation lemmas. It keeps the deprecated aliases and gives each one its target and its date, so that `mlib sync` can list them under the target.
 
 `typeHash` is the 32-bit hash of the type, in 8 hex digits, after the program removes `mdata` and gives the universe parameters the names `u_1`, `u_2` and so on in order. Two declarations with the same statement up to the names of the universes get the same hash. `valueHash` is the same hash of the value of a definition. The hashes come from `Expr.hash`, so they can change when the Lean toolchain changes. `mlib sync` compares hashes only between two indexes of the same toolchain, and it uses the pretty-printed type otherwise.
+
+`proofUses` keeps only the theorems of Mathlib that the proof uses, and not the instances, definitions and other constants. Rule 2 of spec 04.4 counts the uses of a theorem, and the graph of spec 09.5 needs the theorems of a proof. A definition in a proof is almost always also in the type, so `uses` has it. With the other constants, the file is many times larger.
 
 `--no-type` skips the pretty-printed type. The pretty printer is the slowest part of the run.
 -/
@@ -77,6 +80,18 @@ def hashHex (e : Expr) : String :=
 def mathlibUses (env : Environment) (self : Name) (e : Expr) : Array String :=
   let cs := e.getUsedConstants.filter fun c =>
     c != self && !isHelper env c &&
+    match env.getModuleIdxFor? c with
+    | some idx => inMathlib env.header.moduleNames[idx.toNat]!
+    | none => false
+  (cs.map Name.toString).qsort (· < ·) |>.toList.eraseDups.toArray
+
+/-- The theorems of Mathlib that a proof uses, sorted (the field `proofUses` of spec 09.3). -/
+def proofUses (env : Environment) (self : Name) (proof : Expr) : Array String :=
+  let cs := proof.getUsedConstants.filter fun c =>
+    c != self && !isHelper env c && !isInstanceCore env c &&
+    (match env.find? c with
+     | some (.thmInfo _) => true
+     | _ => false) &&
     match env.getModuleIdxFor? c with
     | some idx => inMathlib env.header.moduleNames[idx.toNat]!
     | none => false
@@ -183,21 +198,37 @@ unsafe def main (args : List String) : IO UInt32 := do
   let size := (decls.size + o.jobs - 1) / o.jobs
   let chunks := (List.range o.jobs).map fun i => decls.extract (i * size) ((i + 1) * size)
   let tasks ← chunks.mapM fun chunk => IO.asTask (prio := .dedicated) do
-    let run : CoreM (Array String) := chunk.mapM fun (n, info, k) => do
+    let line (n : Name) (info : ConstantInfo) (k : String) : CoreM String := do
       try
         return (← entry o simp n info k).compress
       catch e =>
         return (Json.mkObj [("name", n.toString), ("kind", k), ("error", ← e.toMessageData.toString)]).compress
+    let run : CoreM (Array String) := chunk.mapM fun (n, info, k) => line n info k
     let (lines, _) ← run.toIO ctx { env }
-    return lines
+    let proofs := chunk.filterMap fun (n, info, _) =>
+      match info with
+      | .thmInfo t =>
+        let us := proofUses env n t.value
+        if us.isEmpty then none
+        else some (Json.mkObj [("name", n.toString), ("proofUses", toJson us)]).compress
+      | _ => none
+    return (lines, proofs)
   IO.FS.createDirAll o.out
   let h ← IO.FS.Handle.mk (o.out / "index.jsonl") .write
   h.putStrLn (header o "declarations" decls.size).compress
+  let mut proofs : Array String := #[]
   for t in tasks do
     match ← IO.wait t with
-    | .ok lines => for l in lines do h.putStrLn l
+    | .ok (lines, ps) =>
+      for l in lines do h.putStrLn l
+      proofs := proofs ++ ps
     | .error e => throw e
   h.flush
+  -- The theorems that each proof uses.
+  let p ← IO.FS.Handle.mk (o.out / "proofs.jsonl") .write
+  p.putStrLn (header o "proofs" proofs.size).compress
+  for l in proofs do p.putStrLn l
+  p.flush
   -- The module docstrings.
   let m ← IO.FS.Handle.mk (o.out / "modules.jsonl") .write
   let mods := env.header.moduleNames.filter inMathlib
@@ -207,5 +238,5 @@ unsafe def main (args : List String) : IO UInt32 := do
     let docs := docs.map (·.doc)
     m.putStrLn (Json.mkObj [("module", mod.toString), ("docs", toJson docs)]).compress
   m.flush
-  IO.eprintln s!"wrote {decls.size} declarations and {mods.size} modules in {(← IO.monoMsNow) - start} ms"
+  IO.eprintln s!"wrote {decls.size} declarations, {proofs.size} proofs and {mods.size} modules in {(← IO.monoMsNow) - start} ms"
   return 0

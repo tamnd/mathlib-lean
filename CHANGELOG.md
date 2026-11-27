@@ -4,6 +4,10 @@ Each release has a section. The newest release is first.
 
 ## Unreleased
 
+### Added
+
+- `scripts/Index.lean` writes a third file, `proofs.jsonl`. Each line gives a theorem and the theorems of Mathlib that its proof uses, as the field `proofUses` of spec 09.3. Rule 2 of spec 04.4 needs these uses. Before, the index had only the uses of the types and of the values of definitions, so a theorem almost never had five uses.
+
 ## v0.2.0 - 2026-11-27
 
 ### Added
