@@ -4,6 +4,8 @@ Each release has a section. The newest release is first.
 
 ## Unreleased
 
+## v0.8.0 - 2026-11-28
+
 ## v0.7.1 - 2026-11-28
 
 ## v0.7.0 - 2026-11-27
